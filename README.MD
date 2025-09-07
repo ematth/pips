@@ -28,4 +28,4 @@ These are used to left-align rows of the board, if necessary.
 Other details:
 - Rows can have varying sizes, (small rows are not formatted with extra `''` tiles to right-align with the largest row on the board.)
 - A simple check that `num_tiles == num_dominoes * 2` is done in case the board is not solveable. This is **not** a complete board validation, as certain shapes of tiles are not solveable with two-wide dominoes.
-- For each row of the CSV, the last element does **not** have an end comma because this unintentionally extends the length of the row by one. 
+- For each row of the .pips file, the last element does **not** have an end comma because this unintentionally extends the length of the row by one. 
