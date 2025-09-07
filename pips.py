@@ -1,5 +1,5 @@
 OPERATIONS: list[str] = ['=', '=/=', '>', '<', '']
-import csv
+import csv, sys
 
 class PipGame():
     def __init__(self, board: str) -> None:
@@ -28,7 +28,7 @@ class PipGame():
     
     def solution(self) -> bool:
         print('Num tiles: ', sum(len(r) - r.count('') for r in self.board))
-        if len(self.dominoes) * 2 != sum(len(r) - r.count('') for r in self.board):
+        if len(self.dominoes) != sum(len(r) - r.count('') for r in self.board):
             print("Invalid game: number of nodes is not even")
             return False
 
@@ -76,13 +76,7 @@ class PipGame():
 # 2. A solution exists given bag of dominoes
 
 if __name__ == '__main__':
-    game1 = PipGame('boards/board1.csv')
-    game2 = PipGame('boards/board2.csv') 
-    game3 = PipGame('boards/board3.csv')
-    print(game1)
+    game = PipGame(sys.argv[1])
+    print(game)
+    game.solution()
 
-    #print(game2)
-    # game2.solution()
-
-    # #print(game3)
-    # game3.solution()
