@@ -8,6 +8,7 @@ class PipGame():
             reader = csv.reader(f)
             self.board: list[list[str]] = []
             self.dominoes = list(next(reader))
+            self.dominoes = [(self.dominoes[i].strip(), self.dominoes[i+1].strip()) for i in range(0, len(self.dominoes), 2)]
 
             for r in reader:
                 row: list[str] = []
@@ -23,15 +24,19 @@ class PipGame():
         return out
     
     def print_sol(self, sol) -> None:
+        if not sol:
+            print("No solution found")
+            return
         for r in sol:
             print(r)
     
-    def solution(self) -> bool:
+    def solution(self) -> list[list[str]] | None:
         print('Num tiles: ', sum(len(r) - r.count('') for r in self.board))
-        if len(self.dominoes) != sum(len(r) - r.count('') for r in self.board):
+        if len(self.dominoes) * 2 != sum(len(r) - r.count('') for r in self.board):
             print("Invalid game: number of nodes is not even")
             return False
 
+        # create a copy of the board for returning solution
         sol = []
         for r in self.board:
             row = []
@@ -42,38 +47,49 @@ class PipGame():
                     row.append('_')
             sol.append(row)
 
-        n: int = len(self.board)
-        print('n: ', n)
-        i, j = 0, 0
-        while i < n:
-            m: int = len(sol[i])
-
-            # if sol[i][j] == -1:
-            #     # try to place a domino horizontally or vertically
-            #     if j < m - 1 and sol[i][j + 1] == -1:
-            #         # place horizontally
-            #         d = self.dominoes.pop(0)
-            #         sol[i][j], sol[i][j + 1] = d[0], d[1]
-
-            #     elif i < n - 1 and j < m - 1 and sol[i+1][j] == -1:
-            #         # place vertically
-            #         d = self.dominoes.pop(0)
-            #         sol[i][j], sol[i+1][j] = d[0], d[1]
+        n: int = len(sol)
+        def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
+            if i == n:
+                return board
             
-            j += 1
+            m: int = len(board[i])
             if j >= m:
-                j = 0
-                i += 1
-                        
+                return backtrack(board, dominoes, i + 1, 0)
+            if board[i][j] != 'X':
+                return backtrack(board, dominoes, i, j + 1)
+            for d in dominoes:
+                # try horizontal
+                if j + 1 < m and board[i][j + 1] == 'X':
+                    board[i][j] = d[0]
+                    board[i][j + 1] = d[1]
+                    new_dominoes = dominoes[:]
+                    new_dominoes.remove(d)
+                    res = backtrack(board, new_dominoes, i, j + 2)
+                    if res:
+                        return res
+                    board[i][j] = 'X'
+                    board[i][j + 1] = 'X'
+                # try vertical
+                if i + 1 < n and j < len(board[i + 1]) and board[i + 1][j] == 'X':
+                    board[i][j] = d[0]
+                    board[i + 1][j] = d[1]
+                    new_dominoes = dominoes[:]
+                    new_dominoes.remove(d)
+                    res = backtrack(board, new_dominoes, i, j + 1)
+                    if res:
+                        return res
+                    board[i][j] = 'X'
+                    board[i + 1][j] = 'X'
+            # no domino fits here
+            return None
+
+        sol = backtrack(sol, self.dominoes, 0, 0)                
         self.print_sol(sol)
-        return False
-    
-
-
+        return sol
 
 # is valid Pips game?
 # 1. Number of nodes % 2 == 0
-# 2. A solution exists given bag of dominoes
+# 2. A solution exists given list of dominoes
 
 if __name__ == '__main__':
     game = PipGame(sys.argv[1])

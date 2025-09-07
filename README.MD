@@ -4,15 +4,15 @@ Implementation of the Pips game from NYT Games, including board structure, avail
 
 Currently the board and dominoes can be set up and printed out. Future plans include:
 
-- [ ] Iteratively placing dominoes to fill the given board
-- [ ] Recursively placing dominoes to *solve* the board, given tile constraints.
+- [x] Iteratively placing dominoes to fill the given board
+- [ ] Recursively placing dominoes to solve the board, *given tile constraints.*
 - [ ] Validating whether or not a board is *solveable* with given dominoes:
     - Are all dominoes placeable?
     - Are any tiles empty once all dominoes are placed?
     - Do all dominoes meet tile constraints, (i.e. the board has a solution) ?
 
-## CSV format
-Boards and dominoes are stored under `boards/board#.csv`, where the first row of the CSV contains the list of dominoes, and remaining rows describe the board. Every two elements of the header represent a single domino, despite not being grouped that way.
+## Puzzle File Format (.pips)
+Boards and dominoes are stored under `boards/board#.pips`, where the first row of the .pips file contains the list of dominoes, and remaining rows describe the board. Every two elements of the header represent a single domino, despite not being grouped that way.
 
 For the boards, there is some vocab to describe the state of each tile:
 
