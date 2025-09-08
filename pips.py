@@ -47,18 +47,11 @@ class PipGame():
                     row.append('_')
             sol.append(row)
 
-        n: int = len(sol)
-        def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
-            if i == n:
-                return board
-            
+        def place(board, dominoes, i, j) -> list[list[str]] | None:
+            # try horizontal
+            n: int = len(board)
             m: int = len(board[i])
-            if j >= m:
-                return backtrack(board, dominoes, i + 1, 0)
-            if board[i][j] != 'X':
-                return backtrack(board, dominoes, i, j + 1)
             for d in dominoes:
-                # try horizontal
                 if j + 1 < m and board[i][j + 1] == 'X':
                     board[i][j] = d[0]
                     board[i][j + 1] = d[1]
@@ -80,8 +73,19 @@ class PipGame():
                         return res
                     board[i][j] = 'X'
                     board[i + 1][j] = 'X'
-            # no domino fits here
-            return None
+
+        n: int = len(sol)
+        def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
+            if i == n:
+                return board
+            
+            m: int = len(board[i])
+            if j >= m:
+                return backtrack(board, dominoes, i + 1, 0)
+            if board[i][j] != 'X':
+                return backtrack(board, dominoes, i, j + 1)
+            else:
+                return place(board, dominoes, i, j)
 
         sol = backtrack(sol, self.dominoes, 0, 0)                
         self.print_sol(sol)
