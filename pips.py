@@ -1,4 +1,4 @@
-OPERATIONS: list[str] = ['=', '=/=', '>', '<', '']
+OPERATIONS: list[str] = ['=', '!', '>', '<', '']
 import csv, sys
 
 class PipGame():
@@ -66,34 +66,71 @@ class PipGame():
             # if !, all numbers in region must be different
             # if <#, all numbers in region must sum to less than #
             # if >#, all numbers in region must sum to greater than #
+            seen: list[tuple[int, int]] = [(x1, y1), (x2, y2)]
+            for c, x, y in [(c1, x1, y1), (c2, x2, y2)]:
+                stack: list[tuple[int, int]] = [(x, y)]
+                while stack:
+                    cx, cy = stack.pop()
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nx, ny = cx + dx, cy + dy
+                        if 0 <= nx < n and 0 <= ny < len(board[nx]) and (nx, ny) not in seen:
+                            if self.board[nx][ny] == c and c != '-':
+                                seen.append((nx, ny))
+                                stack.append((nx, ny))
+            print(f'Regions for ({x1}, {y1}) & ({x2}, {y2}): {[(x, y, self.board[x][y]) for x, y in seen]}')
+            d1 = [(x, y) for x, y in seen if self.board[x][y] == c1]
+            d2 = [(x, y) for x, y in seen if self.board[x][y] == c2]
 
-            return True
+            vals1 = [int(board[x][y]) for x, y in d1 if board[x][y] not in ['X', '_'] and board[x][y].isdigit()]
+            vals2 = [int(board[x][y]) for x, y in d2 if board[x][y] not in ['X', '_'] and board[x][y].isdigit()]
+            
+            b = [True, True]
+            print(f'D1: {d1}, D2: {d2}')
+            for i, (c, v, t) in enumerate(zip([c1, c2], [vals1, vals2], [domino[0], domino[1]])):
+                if c == '-':
+                    continue
+                if '=' in c:
+                    b[i] = (len(set(v + [t])) == 1)
+                if '!' in c:
+                    b[i] = (len(set(v + [t])) == len(v) + 1)
+                if '<' in c:
+                    b[i] = (sum(v) + int(t) < int(c[1:]))
+                if '>' in c:
+                    b[i] = (sum(v) + int(t) > int(c[1:]))
+                if c.isdigit():
+                    if c == c1 and sum(vals1) + int(domino[0]) > int(c):
+                        return False
+                    if c == c2 and sum(vals2) + int(domino[1]) > int(c):
+                        return False
+            return b[0] and b[1]
 
         def place(board, dominoes, i, j) -> list[list[str]] | None:
             # try horizontal
             m: int = len(board[i])
             for d in dominoes:
                 if j + 1 < m and board[i][j + 1] == 'X':
-                    board[i][j] = d[0]
-                    board[i][j + 1] = d[1]
-                    new_dominoes = dominoes[:]
-                    new_dominoes.remove(d)
-                    res = backtrack(board, new_dominoes, i, j + 2)
-                    if res:
-                        return res
-                    board[i][j] = 'X'
-                    board[i][j + 1] = 'X'
+                    if check(board, d, i, j, i, j + 1):
+                        board[i][j] = d[0]
+                        board[i][j + 1] = d[1]
+                        new_dominoes = dominoes[:]
+                        new_dominoes.remove(d)
+                        res = backtrack(board, new_dominoes, i, j + 2)
+                        if res:
+                            return res
+                        board[i][j] = 'X'
+                        board[i][j + 1] = 'X'
                 # try vertical
                 if i + 1 < n and j < len(board[i + 1]) and board[i + 1][j] == 'X':
-                    board[i][j] = d[0]
-                    board[i + 1][j] = d[1]
-                    new_dominoes = dominoes[:]
-                    new_dominoes.remove(d)
-                    res = backtrack(board, new_dominoes, i, j + 1)
-                    if res:
-                        return res
-                    board[i][j] = 'X'
-                    board[i + 1][j] = 'X'
+                    if check(board, d, i, j, i + 1, j):
+                        board[i][j] = d[0]
+                        board[i + 1][j] = d[1]
+                        new_dominoes = dominoes[:]
+                        new_dominoes.remove(d)
+                        res = backtrack(board, new_dominoes, i, j + 1)
+                        if res:
+                            return res
+                        board[i][j] = 'X'
+                        board[i + 1][j] = 'X'
 
         def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
             if i == n:
