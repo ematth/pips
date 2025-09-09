@@ -21,6 +21,7 @@ These are used to left-align rows of the board, if necessary.
 - `-` -> Empty region: no conditions apply, dots in it can be any number.
 - `=` -> dots in this region must all be the same number.
 - `!` -> dots in this region must all be different numbers.
+- `#` -> dots must sum to this number.
 - `>#` -> dots must sum to more than this number.
 - `<#` -> dots must sum to less than this number.
 - Any of these patterns except for `''` and `-` can be suffixed by a capital letter 'A' through 'Z', representing a unique region. For example, the row `[=A, =A, =B, =B]` is two separate regions with the `=` constraint. 

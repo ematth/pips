@@ -47,9 +47,30 @@ class PipGame():
                     row.append('_')
             sol.append(row)
 
+        n: int = len(sol)
+
+        self.print_sol(sol)
+        print('')
+
+        def check(board, domino, x1, y1, x2, y2) -> bool:
+            # check contraints for placing domino at (x1, y1) and (x2, y2)
+            if board[x1][y1] == '_' or board[x2][y2] == '_':
+                return False
+            c1, c2 = self.board[x1][y1], self.board[x2][y2]
+            # For each tile (x1, y1) and (x2, y2), recurse through its neighbors to find all connected tiles
+            # and check if they satisfy the constraints of the region they are in
+            # if '-', no constraints
+            # if capital letter included, include only neighbor tiles with the same condition and letter
+            # if #, all numbers in region must sum to #
+            # if =, all numbers in region must be the same
+            # if !, all numbers in region must be different
+            # if <#, all numbers in region must sum to less than #
+            # if >#, all numbers in region must sum to greater than #
+
+            return True
+
         def place(board, dominoes, i, j) -> list[list[str]] | None:
             # try horizontal
-            n: int = len(board)
             m: int = len(board[i])
             for d in dominoes:
                 if j + 1 < m and board[i][j + 1] == 'X':
@@ -74,7 +95,6 @@ class PipGame():
                     board[i][j] = 'X'
                     board[i + 1][j] = 'X'
 
-        n: int = len(sol)
         def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
             if i == n:
                 return board
