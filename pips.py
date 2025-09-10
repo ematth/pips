@@ -5,16 +5,21 @@ class PipGame():
     def __init__(self, board: str) -> None:
         
         with open(board, 'r') as f:
-            reader = csv.reader(f)
-            self.board: list[list[str]] = []
-            self.dominoes = list(next(reader))
-            self.dominoes = [(self.dominoes[i].strip(), self.dominoes[i+1].strip()) for i in range(0, len(self.dominoes), 2)]
-
-            for r in reader:
-                row: list[str] = []
-                for c in r:
-                    row.append(c.strip())
-                self.board.append(row)
+            lines = f.readlines()
+            
+            # Parse dominoes
+            domino_line = lines[0]
+            domino_values = [d.strip() for d in domino_line.split(',')]
+            self.dominoes = [(domino_values[i], domino_values[i+1]) for i in range(0, len(domino_values), 2)]
+            
+            # Parse board
+            self.board = []
+            board_lines = lines[1:]
+            for line in board_lines:
+                # Handle trailing newlines
+                line = line.strip()
+                if line:
+                    self.board.append([c.strip() for c in line.split(',')])
 
     def __str__(self) -> str:
         out = ''
@@ -31,8 +36,9 @@ class PipGame():
             print(r)
     
     def solution(self) -> list[list[str]] | None:
-        print('Num tiles: ', sum(len(r) - r.count('') for r in self.board))
-        if len(self.dominoes) * 2 != sum(len(r) - r.count('') for r in self.board):
+        num_tiles = sum(len(r) - r.count('') for r in self.board)
+        print('Num tiles: ', num_tiles)
+        if len(self.dominoes) * 2 != num_tiles:
             print("Invalid game: number of nodes is not even")
             return False
 
@@ -49,9 +55,7 @@ class PipGame():
 
         n: int = len(sol)
 
-        self.print_sol(sol)
-        print('')
-
+        # Function to check if a domino can be placed at (x1, y1) and (x2, y2)
         def check(board, domino, x1, y1, x2, y2) -> bool:
             # check contraints for placing domino at (x1, y1) and (x2, y2)
             if board[x1][y1] == '_' or board[x2][y2] == '_':
@@ -66,106 +70,127 @@ class PipGame():
             # if !, all numbers in region must be different
             # if <#, all numbers in region must sum to less than #
             # if >#, all numbers in region must sum to greater than #
-            seen: list[tuple[int, int]] = [(x1, y1), (x2, y2)]
-            for c, x, y in [(c1, x1, y1), (c2, x2, y2)]:
-                stack: list[tuple[int, int]] = [(x, y)]
-                while stack:
-                    cx, cy = stack.pop()
+            def find_region(start_x, start_y):
+                constraint = self.board[start_x][start_y]
+                if constraint == '-':
+                    return [(start_x, start_y)]
+                
+                q = [(start_x, start_y)]
+                visited = set([(start_x, start_y)])
+                
+                head = 0
+                while head < len(q):
+                    cx, cy = q[head]
+                    head += 1
+                    
                     for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                         nx, ny = cx + dx, cy + dy
-                        if 0 <= nx < n and 0 <= ny < len(board[nx]) and (nx, ny) not in seen:
-                            if self.board[nx][ny] == c and c != '-':
-                                seen.append((nx, ny))
-                                stack.append((nx, ny))
-            #print(f'Regions for ({x1}, {y1}) & ({x2}, {y2}): {[(x, y, self.board[x][y]) for x, y in seen]}')
-            d1 = [(x, y) for x, y in seen if self.board[x][y] == c1]
-            d2 = [(x, y) for x, y in seen if self.board[x][y] == c2]
+                        if 0 <= nx < n and 0 <= ny < len(self.board[nx]) and (nx, ny) not in visited:
+                            if self.board[nx][ny] == constraint:
+                                visited.add((nx, ny))
+                                q.append((nx, ny))
+                return q
+
+            d1 = find_region(x1, y1)
+            d2 = find_region(x2, y2)
 
             vals1 = [int(board[x][y]) for x, y in d1 if board[x][y] not in ['X', '_'] and board[x][y].isdigit()]
             vals2 = [int(board[x][y]) for x, y in d2 if board[x][y] not in ['X', '_'] and board[x][y].isdigit()]
             
             b = [True, True]
-            #print(f'D1: {d1}, D2: {d2}')
-            for i, (c, v, t) in enumerate(zip([c1, c2], [vals1, vals2], [domino[0], domino[1]])):
-                if c == '-':
-                    continue
-                if '=' in c:
-                    b[i] = (len(set(v + [t])) == 1)
-                if '!' in c:
-                    b[i] = (len(set(v + [t])) == len(v) + 1)
-                if '<' in c:
-                    b[i] = (sum(v) + int(t) < int(c[1:]))
-                if '>' in c:
-                    b[i] = (sum(v) + int(t) > int(c[1:]))
-                if c.isdigit():
-                    if c == c1 and sum(vals1) + int(domino[0]) > int(c):
-                        return False
-                    if c == c2 and sum(vals2) + int(domino[1]) > int(c):
-                        return False
+            # Check for region 1
+            if c1 != '-':
+                all_vals = list(vals1) # copy
+                all_vals.append(int(domino[0]))
+                if c1 == c2:
+                    all_vals.append(int(domino[1]))
+                
+                open_count = sum(1 for x,y in d1 if board[x][y] == 'X')
+                is_full = (open_count == (2 if c1 == c2 else 1))
+
+                if '=' in c1 and len(set(all_vals)) > 1: b[0] = False
+                if '!' in c1 and len(set(all_vals)) != len(all_vals): b[0] = False
+                if '<' in c1 and sum(all_vals) >= int(c1.strip('<')): b[0] = False
+                if '>' in c1 and sum(all_vals) <= int(c1.strip('>')) and is_full: b[0] = False
+                if c1.isdigit():
+                    s, target = sum(all_vals), int(c1)
+                    if s > target or (is_full and s != target): b[0] = False
+            
+            # Check for region 2 (if different)
+            if c2 != '-' and c1 != c2:
+                all_vals = list(vals2) # copy
+                all_vals.append(int(domino[1]))
+
+                open_count = sum(1 for x,y in d2 if board[x][y] == 'X')
+                is_full = (open_count == 1)
+
+                if '=' in c2 and len(set(all_vals)) > 1: b[1] = False
+                if '!' in c2 and len(set(all_vals)) != len(all_vals): b[1] = False
+                if '<' in c2 and sum(all_vals) >= int(c2.strip('<')): b[1] = False
+                if '>' in c2 and sum(all_vals) <= int(c2.strip('>')) and is_full: b[1] = False
+                if c2.isdigit():
+                    s, target = sum(all_vals), int(c2)
+                    if s > target or (is_full and s != target): b[1] = False
+            elif c1 == c2:
+                b[1] = b[0]
+
             return b[0] and b[1]
 
+        # Function to place a domino on the board
         def place(board, dominoes, i, j) -> list[list[str]] | None:
-            # try horizontal
             m: int = len(board[i])
             for d in dominoes:
-                if j + 1 < m and board[i][j + 1] == 'X':
-                    if check(board, d, i, j, i, j + 1):
-                        board[i][j] = d[0]
-                        board[i][j + 1] = d[1]
-                        new_dominoes = dominoes[:]
-                        new_dominoes.remove(d)
-                        res = backtrack(board, new_dominoes, i, j + 2)
-                        if res:
-                            return res
-                        board[i][j] = 'X'
-                        board[i][j + 1] = 'X'
-                    elif check(board, d[::-1], i, j, i, j + 1):
-                        board[i][j] = d[1]
-                        board[i][j + 1] = d[0]
-                        new_dominoes = dominoes[:]
-                        new_dominoes.remove(d)
-                        res = backtrack(board, new_dominoes, i, j + 2)
-                        if res:
-                            return res
-                        board[i][j] = 'X'
-                        board[i][j + 1] = 'X'
-                # try vertical
-                if i + 1 < n and j < len(board[i + 1]) and board[i + 1][j] == 'X':
-                    if check(board, d, i, j, i + 1, j):
-                        board[i][j] = d[0]
-                        board[i + 1][j] = d[1]
-                        new_dominoes = dominoes[:]
-                        new_dominoes.remove(d)
-                        res = backtrack(board, new_dominoes, i, j + 1)
-                        if res:
-                            return res
-                        board[i][j] = 'X'
-                        board[i + 1][j] = 'X'
-                    elif check(board, d[::-1], i, j, i + 1, j):
-                        board[i][j] = d[1]
-                        board[i + 1][j] = d[0]
-                        new_dominoes = dominoes[:]
-                        new_dominoes.remove(d)
-                        res = backtrack(board, new_dominoes, i, j + 1)
-                        if res:
-                            return res
-                        board[i][j] = 'X'
-                        board[i + 1][j] = 'X'
-            return board
+                
+                orientations = [d]
+                if d[0] != d[1]:
+                    orientations.append(d[::-1])
 
-        def backtrack(board, dominoes, i, j) -> list[list[str]] | None:
-            if i == n:
-                return board
+                for current_d in orientations:
+                    # Horizontal placement
+                    if j + 1 < m and board[i][j + 1] == 'X':
+                        if check(board, current_d, i, j, i, j + 1):
+                            board[i][j] = current_d[0]
+                            board[i][j + 1] = current_d[1]
+                            new_dominoes = dominoes[:]
+                            new_dominoes.remove(d)
+                            res = backtrack(board, new_dominoes)
+                            if res:
+                                return res
+                            board[i][j] = 'X'
+                            board[i][j + 1] = 'X'
+
+                    # Vertical placement
+                    if i + 1 < n and j < len(board[i + 1]) and board[i + 1][j] == 'X':
+                        if check(board, current_d, i, j, i + 1, j):
+                            board[i][j] = current_d[0]
+                            board[i + 1][j] = current_d[1]
+                            new_dominoes = dominoes[:]
+                            new_dominoes.remove(d)
+                            res = backtrack(board, new_dominoes)
+                            if res:
+                                return res
+                            board[i][j] = 'X'
+                            board[i + 1][j] = 'X'
+            return None
+
+        # Function to find the next empty tile on the board
+        def find_next_empty(board):
+            for r in range(n):
+                for c in range(len(board[r])):
+                    if board[r][c] == 'X':
+                        return (r, c)
+            return None
+
+        # Function to backtrack and place dominoes on the board
+        def backtrack(board, dominoes) -> list[list[str]] | None:
+            pos = find_next_empty(board)
+            if not pos:
+                return board if not dominoes else None
             
-            m: int = len(board[i])
-            if j >= m:
-                return backtrack(board, dominoes, i + 1, 0)
-            if board[i][j] != 'X':
-                return backtrack(board, dominoes, i, j + 1)
-            else:
-                return place(board, dominoes, i, j)
+            i, j = pos
+            return place(board, dominoes, i, j)
 
-        sol = backtrack(sol, self.dominoes, 0, 0)                
+        sol = backtrack(sol, self.dominoes)                
         self.print_sol(sol)
         return sol
 
