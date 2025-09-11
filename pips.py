@@ -21,6 +21,18 @@ class PipGame():
                 if line:
                     self.board.append([c.strip() for c in line.split(',')])
 
+    @staticmethod
+    def get_numeric_constraint(constraint_str):
+        num_str = ""
+        for char in constraint_str:
+            if char.isdigit():
+                num_str += char
+            else:
+                break # stop at first non-digit
+        if num_str:
+            return int(num_str)
+        return None
+
     def __str__(self) -> str:
         out = ''
         for r in self.board:
@@ -112,8 +124,9 @@ class PipGame():
                 if '!' in c1 and len(set(all_vals)) != len(all_vals): b[0] = False
                 if '<' in c1 and sum(all_vals) >= int(c1.strip('<')): b[0] = False
                 if '>' in c1 and sum(all_vals) <= int(c1.strip('>')) and is_full: b[0] = False
-                if c1.isdigit():
-                    s, target = sum(all_vals), int(c1)
+                target = self.get_numeric_constraint(c1)
+                if target is not None:
+                    s = sum(all_vals)
                     if s > target or (is_full and s != target): b[0] = False
             
             # Check for region 2 (if different)
@@ -128,8 +141,9 @@ class PipGame():
                 if '!' in c2 and len(set(all_vals)) != len(all_vals): b[1] = False
                 if '<' in c2 and sum(all_vals) >= int(c2.strip('<')): b[1] = False
                 if '>' in c2 and sum(all_vals) <= int(c2.strip('>')) and is_full: b[1] = False
-                if c2.isdigit():
-                    s, target = sum(all_vals), int(c2)
+                target = self.get_numeric_constraint(c2)
+                if target is not None:
+                    s = sum(all_vals)
                     if s > target or (is_full and s != target): b[1] = False
             elif c1 == c2:
                 b[1] = b[0]
