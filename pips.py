@@ -49,7 +49,7 @@ class PipGame():
     
     def solution(self) -> list[list[str]] | None:
         num_tiles = sum(len(r) - r.count('') for r in self.board)
-        print('Num tiles: ', num_tiles)
+        #print('Num tiles: ', num_tiles)
         if len(self.dominoes) * 2 != num_tiles:
             print("Invalid game: number of nodes is not even")
             return False
