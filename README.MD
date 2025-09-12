@@ -4,12 +4,31 @@ Implementation of the Pips game from NYT Games, including board structure, avail
 
 Currently the board and dominoes can be set up and printed out. Future plans include:
 
+- [] Color-coding solution dominoes, (as opposed to just printing the locations of numbers)
+
+- [] Webscrape daily NYT pips puzzles for daily testing
+
+- Generating puzzles from scratch
+    - [] From a set of dominoes
+    - [] From a starting board shape (w/ or w/o contraints)
+
+- [] Potentially refining the `.pips` file format?
+
+- [] Optimizing code to fix drastic slowdown while solving `board16.pips`
+
 - [x] Iteratively placing dominoes to fill the given board
-- [ ] Recursively placing dominoes to solve the board, *given tile constraints.*
-- [ ] Validating whether or not a board is *solveable* with given dominoes:
+- [x] Recursively placing dominoes to solve the board, *given tile constraints.*
+- [x] Validating whether or not a board is *solveable* with given dominoes:
     - Are all dominoes placeable?
     - Are any tiles empty once all dominoes are placed?
     - Do all dominoes meet tile constraints, (i.e. the board has a solution) ?
+
+
+## Code Files
+
+- `pips.py`: handles all logic for solution solving. The high-level method is a standard backtracking problem, where domino orientations and placements are backtracked to determine a solution that uses every domino. The low-level method uses Breadth-First Search (BFS) to find all neighboring tiles whose constraint affects the domino currently being placed. This file can be called with `python pips.py boards/board#.pips` to return the solution of a given board.
+
+- `all.py`: Solves all boards in the `boards` directory and returns each solution.
 
 ## Puzzle File Format (.pips)
 Boards and dominoes are stored under `boards/board#.pips`, where the first row of the .pips file contains the list of dominoes, and remaining rows describe the board. Every two elements of the header represent a single domino, despite not being grouped that way.

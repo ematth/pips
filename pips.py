@@ -208,10 +208,6 @@ class PipGame():
         self.print_sol(sol)
         return sol
 
-# is valid Pips game?
-# 1. Number of nodes % 2 == 0
-# 2. A solution exists given list of dominoes
-
 if __name__ == '__main__':
     game = PipGame(sys.argv[1])
     print(game)
