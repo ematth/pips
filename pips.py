@@ -1,9 +1,9 @@
 OPERATIONS: list[str] = ['=', '!', '>', '<', '']
-import csv, sys
+import csv, sys, os, ast
 
 class PipGame():
     def __init__(self, board: str) -> None:
-        
+        self.board_path = board
         with open(board, 'r') as f:
             lines = f.readlines()
             
@@ -47,12 +47,12 @@ class PipGame():
         for r in sol:
             print(r)
     
-    def solution(self) -> list[list[str]] | None:
+    def solution(self) -> tuple[list[list[str]] | None, bool]:
         num_tiles = sum(len(r) - r.count('') for r in self.board)
         #print('Num tiles: ', num_tiles)
         if len(self.dominoes) * 2 != num_tiles:
             print("Invalid game: number of nodes is not even")
-            return False
+            return None, False
 
         # create a copy of the board for returning solution
         sol = []
@@ -204,9 +204,33 @@ class PipGame():
             i, j = pos
             return place(board, dominoes, i, j)
 
-        sol = backtrack(sol, self.dominoes)                
+        sol = backtrack(sol, self.dominoes)
         self.print_sol(sol)
-        return sol
+
+        matches_file = False
+        if sol:
+            # Check for a corresponding solution file
+            board_filename = os.path.basename(self.board_path)
+            solution_filename = board_filename.replace('board-', 'solution-').replace('.pips', '.txt')
+            solution_path = os.path.join('solutions', solution_filename)
+
+            if os.path.exists(solution_path):
+                with open(solution_path, 'r') as f:
+                    solution_from_file = [ast.literal_eval(line.strip()) for line in f]
+                
+                # Convert all elements to string for consistent comparison
+                sol_str = [[str(item) for item in row] for row in sol]
+                solution_from_file_str = [[str(item) for item in row] for row in solution_from_file]
+
+                if sol_str == solution_from_file_str:
+                    print("\nSolution matches the one on file.")
+                    matches_file = True
+                else:
+                    print("\nSolution does not match the one on file (but other solutions may exist).")
+            else:
+                print("\nNo corresponding solution file found.")
+
+        return sol, matches_file
 
 if __name__ == '__main__':
     game = PipGame(sys.argv[1])
