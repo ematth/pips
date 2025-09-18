@@ -122,8 +122,14 @@ class PipGame():
 
                 if '=' in c1 and len(set(all_vals)) > 1: b[0] = False
                 if '!' in c1 and len(set(all_vals)) != len(all_vals): b[0] = False
-                if '<' in c1 and sum(all_vals) >= int(c1.strip('<')): b[0] = False
-                if '>' in c1 and sum(all_vals) <= int(c1.strip('>')) and is_full: b[0] = False
+                if '<' in c1:
+                    num_str = "".join(filter(str.isdigit, c1))
+                    if num_str and sum(all_vals) >= int(num_str):
+                        b[0] = False
+                if '>' in c1:
+                    num_str = "".join(filter(str.isdigit, c1))
+                    if num_str and sum(all_vals) <= int(num_str) and is_full:
+                        b[0] = False
                 target = self.get_numeric_constraint(c1)
                 if target is not None:
                     s = sum(all_vals)
@@ -139,8 +145,14 @@ class PipGame():
 
                 if '=' in c2 and len(set(all_vals)) > 1: b[1] = False
                 if '!' in c2 and len(set(all_vals)) != len(all_vals): b[1] = False
-                if '<' in c2 and sum(all_vals) >= int(c2.strip('<')): b[1] = False
-                if '>' in c2 and sum(all_vals) <= int(c2.strip('>')) and is_full: b[1] = False
+                if '<' in c2:
+                    num_str = "".join(filter(str.isdigit, c2))
+                    if num_str and sum(all_vals) >= int(num_str):
+                        b[1] = False
+                if '>' in c2:
+                    num_str = "".join(filter(str.isdigit, c2))
+                    if num_str and sum(all_vals) <= int(num_str) and is_full:
+                        b[1] = False
                 target = self.get_numeric_constraint(c2)
                 if target is not None:
                     s = sum(all_vals)

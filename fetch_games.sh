@@ -3,8 +3,8 @@
 # --- Configuration ---
 # Set the start and end dates for the range you want to fetch.
 # Format: YYYY-MM-DD
-start_date="2025-09-01"
-end_date="2025-09-15"
+start_date="2025-08-18"
+end_date="2025-09-18"
 # ---------------------
 
 echo "Starting to fetch Pips games from $start_date to $end_date..."
@@ -18,13 +18,19 @@ while [ "$current_date_sec" -le "$end_date_sec" ]; do
     # Format the current date as YYYY-MM-DD
     current_date_fmt=$(date -d "@$current_date_sec" +%Y-%m-%d)
     
-    echo "Fetching game for: $current_date_fmt"
-    
-    # Run your Python script with the current date as an argument
-    python3 nytgames.py "$current_date_fmt"
-    
-    # Be polite to the server: wait for 1 second between requests
-    sleep 0.5
+    # Check if a board file for this date already exists
+    board_files=(boards/board-${current_date_fmt}-*.pips)
+    if [ -e "${board_files[0]}" ]; then
+        echo "Games for $current_date_fmt already exist. Skipping."
+    else
+        echo "Fetching game for: $current_date_fmt"
+        
+        # Run your Python script with the current date as an argument
+        python3 nytgames.py "$current_date_fmt"
+        
+        # Be polite to the server: wait for 1 second between requests
+        sleep 1
+    fi
     
     # Increment the current date by one day
     current_date_sec=$(date -d "$current_date_fmt + 1 day" +%s)
