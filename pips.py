@@ -1,5 +1,11 @@
 OPERATIONS: list[str] = ['=', '!', '>', '<', '']
-import csv, sys, os, ast
+import sys, os, ast
+
+"""
+Initial implementation of the Pips game solver.
+This works by parsing the .json from the NYT Games API and converting it into a CSV-like file (.pips).
+The initial implementation is fine for most puzzles, but it uses additional space for non-rectangular boards or boards that aren't left-aligned with their tiles.
+"""
 
 class PipGame():
     def __init__(self, board: str) -> None:
@@ -49,8 +55,8 @@ class PipGame():
     
     def solution(self) -> tuple[list[list[str]] | None, bool]:
         num_tiles = sum(len(r) - r.count('') for r in self.board)
-        #print('Num tiles: ', num_tiles)
-        if len(self.dominoes) * 2 != num_tiles:
+        print('Num tiles: ', num_tiles)
+        if num_tiles % 2 != 0:
             print("Invalid game: number of nodes is not even")
             return None, False
 

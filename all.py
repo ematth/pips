@@ -6,18 +6,23 @@ if __name__ == '__main__':
     s = time.time()
     matching_solutions = 0
     total_boards = 0
+    no_solution_boards = 0
     for file in os.listdir('boards'):
         if file.endswith('.pips'):
             total_boards += 1
             print(f'{file}:')
             game = PipGame(f'boards/{file}')
-            print(game)
+            #print(game)
             _, matches = game.solution()
             if matches:
                 matching_solutions += 1
+            elif _ is None and not matches:
+                no_solution_boards += 1
+                print('No solution found')
             print('------------------------')
     e = time.time()
     print(f'Time taken: {round(e - s, 3)} seconds')
     avg = (e - s) / len(os.listdir('boards'))
     print(f'Average time/puzzle: {round(avg, 3)} seconds')
     print(f'{matching_solutions} / {total_boards} matching solutions')
+    print(f'{no_solution_boards} / {total_boards} no solution boards')

@@ -3,11 +3,14 @@
 # --- Configuration ---
 # Set the start and end dates for the range you want to fetch.
 # Format: YYYY-MM-DD
-start_date="2025-08-18"
-end_date="2025-09-18"
+start_date="2025-08-20"
+end_date="2025-10-17"
 # ---------------------
 
 echo "Starting to fetch Pips games from $start_date to $end_date..."
+
+# Create boards_json directory if it doesn't exist
+mkdir -p boards_json
 
 # Convert the end date to seconds since the epoch for comparison
 end_date_sec=$(date -d "$end_date" +%s)
@@ -18,18 +21,26 @@ while [ "$current_date_sec" -le "$end_date_sec" ]; do
     # Format the current date as YYYY-MM-DD
     current_date_fmt=$(date -d "@$current_date_sec" +%Y-%m-%d)
     
-    # Check if a board file for this date already exists
-    board_files=(boards/board-${current_date_fmt}-*.pips)
-    if [ -e "${board_files[0]}" ]; then
-        echo "Games for $current_date_fmt already exist. Skipping."
+    # Check if JSON file for this date already exists
+    json_file="boards_json/${current_date_fmt}.json"
+    if [ -e "$json_file" ]; then
+        echo "JSON for $current_date_fmt already exists. Skipping."
     else
-        echo "Fetching game for: $current_date_fmt"
+        echo "Fetching JSON for: $current_date_fmt"
+        url="https://www.nytimes.com/svc/pips/v1/${current_date_fmt}.json"
         
-        # Run your Python script with the current date as an argument
-        python3 nytgames.py "$current_date_fmt"
+        # Fetch JSON using curl
+        curl -s "$url" -o "$json_file"
         
-        # Be polite to the server: wait for 1 second between requests
-        sleep 1
+        # Check if the download was successful
+        if [ $? -eq 0 ] && [ -s "$json_file" ]; then
+            echo "Successfully saved $json_file"
+        else
+            echo "Failed to fetch $current_date_fmt"
+            rm -f "$json_file"
+        fi
+        
+        sleep 0.5
     fi
     
     # Increment the current date by one day
