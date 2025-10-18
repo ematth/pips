@@ -9,24 +9,22 @@ if __name__ == '__main__':
     total_boards = 0
     no_solution_boards = 0
     timeout_boards = 0
-    difficulty = sys.argv[1] if len(sys.argv) > 1 else 'easy'
-    # Default timeout: 120s for hard, 60s for easy/medium
-    default_timeout = 120 if difficulty == 'hard' else 60
-    timeout_limit = int(sys.argv[2]) if len(sys.argv) > 2 else default_timeout
-    print(f'Difficulty: {difficulty}, Timeout: {timeout_limit}s')
-    for file in tqdm(os.listdir('boards_json')):
-        if file.endswith('.json'):
-            total_boards += 1
-            data = json.load(open(f'boards_json/{file}'))
-            game = Graph(data, difficulty)
-            isSolved = game.solve(timeout=timeout_limit)
-            if isSolved is True:
-                matching_solutions += 1
-            elif isSolved is False:
-                no_solution_boards += 1
-            else:  # isSolved is None (timeout)
-                print(f'Timeout on puzzle {file}\n')
-                timeout_boards += 1
+    timeout_limit = int(sys.argv[1]) if len(sys.argv) > 1 else 15
+    for difficulty in ['easy', 'medium', 'hard']:
+        print(f'Difficulty: {difficulty}, Timeout: {timeout_limit}s')
+        for file in tqdm(os.listdir('boards_json')):
+            if file.endswith('.json'):
+                total_boards += 1
+                data = json.load(open(f'boards_json/{file}'))
+                game = Graph(data, difficulty)
+                isSolved = game.solve(timeout=timeout_limit)
+                if isSolved is True:
+                    matching_solutions += 1
+                elif isSolved is False:
+                    no_solution_boards += 1
+                else:  # isSolved is None (timeout)
+                    print(f'Timeout on puzzle {file}\n')
+                    timeout_boards += 1
     print('------------------------')
     e = time.time()
     print(f'Time taken: {round(e - s, 3)} seconds')
