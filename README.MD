@@ -41,7 +41,7 @@ This change is what allows for hard puzzles to maintain a <15 second/puzzle solv
 
 - `all.py`: Solves all boards in the `boards_json` directory and returns each solution.
 
-- `nytgames.py`: imports the easy, medium, and hard boards from NYTGames as a specified date. The farthest date to check is 2025-07-05 according to comments online.
+- `nytgames.py`: imports the easy, medium, and hard boards from NYTGames as a specified date. The farthest date to check is `2025-08-18`.
 
 - `fetch_games.sh`: performs the import script for all dates in a specified range.
 
