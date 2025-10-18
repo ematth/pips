@@ -1,28 +1,37 @@
-from pips import PipGame
+from pips3 import Graph
 import time
-import os
+import os, json, sys
+from tqdm import tqdm
 
 if __name__ == '__main__':
     s = time.time()
     matching_solutions = 0
     total_boards = 0
     no_solution_boards = 0
-    for file in os.listdir('boards'):
-        if file.endswith('.pips'):
+    timeout_boards = 0
+    difficulty = sys.argv[1] if len(sys.argv) > 1 else 'easy'
+    # Default timeout: 120s for hard, 60s for easy/medium
+    default_timeout = 120 if difficulty == 'hard' else 60
+    timeout_limit = int(sys.argv[2]) if len(sys.argv) > 2 else default_timeout
+    print(f'Difficulty: {difficulty}, Timeout: {timeout_limit}s')
+    for file in tqdm(os.listdir('boards_json')):
+        if file.endswith('.json'):
             total_boards += 1
-            print(f'{file}:')
-            game = PipGame(f'boards/{file}')
-            #print(game)
-            _, matches = game.solution()
-            if matches:
+            data = json.load(open(f'boards_json/{file}'))
+            game = Graph(data, difficulty)
+            isSolved = game.solve(timeout=timeout_limit)
+            if isSolved is True:
                 matching_solutions += 1
-            elif _ is None and not matches:
+            elif isSolved is False:
                 no_solution_boards += 1
-                print('No solution found')
-            print('------------------------')
+            else:  # isSolved is None (timeout)
+                print(f'Timeout on puzzle {file}\n')
+                timeout_boards += 1
+    print('------------------------')
     e = time.time()
     print(f'Time taken: {round(e - s, 3)} seconds')
-    avg = (e - s) / len(os.listdir('boards'))
+    avg = (e - s) / total_boards
     print(f'Average time/puzzle: {round(avg, 3)} seconds')
-    print(f'{matching_solutions} / {total_boards} matching solutions')
-    print(f'{no_solution_boards} / {total_boards} no solution boards')
+    print(f'[OK] {matching_solutions} / {total_boards} matching solutions')
+    print(f'[FAIL] {no_solution_boards} / {total_boards} no solution boards')
+    print(f'[TIMEOUT] {timeout_boards} / {total_boards} timed out (>{timeout_limit}s)')

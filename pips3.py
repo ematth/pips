@@ -1,8 +1,10 @@
 import json, sys, time, random
+from multiprocessing import Process, Queue, cpu_count
 
 """
 Attempt to construct and solve boards from the provided JSON files.
-This is the format used by the NYT Games API, and going from this format directly to a graph structure will make the solving process easier.
+Compared to pips2.py, this version uses multiprocessing to attempt multiple deep searches in parallel.
+This SIGNIFICANTLY improves the solve rate for hard puzzles, and what allows it to use as much time as needed for medium puzzles.
 """
 
 class Graph:
@@ -111,38 +113,110 @@ class Graph:
 
 # ------------------------------------------------------------------------------------------------
 
-    def solve(self, timeout=60, max_attempts=3):
+    def solve(self, timeout=60, max_attempts=7, use_parallel=True):
         """Solve the puzzle by placing dominoes on the graph.
         
         Args:
             timeout: Maximum time in seconds to attempt solving (default: 60)
-            max_attempts: Number of random attempts to try (default: 3)
+            max_attempts: Number of random attempts to try (default: 7)
+            use_parallel: Use parallel processing for attempts (default: True)
             
         Returns:
             True if solved, False if failed, None if timeout
         """
-        # Try multiple times with different random seeds
+        if use_parallel and max_attempts > 1:
+            return self._solve_parallel(timeout, max_attempts)
+        else:
+            return self._solve_sequential(timeout, max_attempts)
+    
+    def _solve_parallel(self, timeout, max_attempts):
+        """Solve using parallel processes for multiple attempts."""
+        overall_start = time.time()
+        
+        # Use up to 4 processes or max_attempts, whichever is smaller
+        num_processes = min(max_attempts, cpu_count(), 4)
+        
+        # Create a queue to collect results
+        result_queue = Queue()
+        processes = []
+        
+        # Start parallel attempts
+        for attempt in range(num_processes):
+            p = Process(target=self._solve_attempt_worker, 
+                       args=(attempt, timeout, result_queue))
+            p.start()
+            processes.append(p)
+        
+        # Wait for first success or all to finish
+        solution_found = None
+        while time.time() - overall_start < timeout:
+            # Check if any process has found a solution
+            if not result_queue.empty():
+                result = result_queue.get()
+                if result is True:
+                    solution_found = True
+                    break
+            
+            # Check if all processes are done
+            if all(not p.is_alive() for p in processes):
+                break
+            
+            time.sleep(0.01)  # Small sleep to avoid busy waiting
+        
+        # Terminate remaining processes
+        for p in processes:
+            if p.is_alive():
+                p.terminate()
+                p.join(timeout=0.1)
+        
+        # If we found a solution in the queue, return it
+        if solution_found:
+            return True
+        
+        # Check queue one more time for any late results
+        while not result_queue.empty():
+            result = result_queue.get()
+            if result is True:
+                return True
+        
+        return None  # Timeout or all failed
+    
+    def _solve_attempt_worker(self, attempt_num, timeout, result_queue):
+        """Worker function for parallel solving attempts."""
+        try:
+            # Set unique random seed
+            random.seed(attempt_num * 1000 + len(self.nodes))
+            
+            # Try solving
+            result = self._solve_once(timeout)
+            
+            # Put result in queue
+            result_queue.put(result if result is not None else False)
+        except Exception:
+            result_queue.put(False)
+    
+    def _solve_sequential(self, timeout, max_attempts):
+        """Original sequential solving (fallback)."""
         overall_start = time.time()
         
         for attempt in range(max_attempts):
             if time.time() - overall_start >= timeout:
-                return None  # Overall timeout
+                return None
             
-            # Set different random seed for each attempt
-            random.seed(attempt)
+            random.seed(attempt * 1000 + len(self.nodes))
             
-            # Try solving with time remaining
-            remaining_time = timeout - (time.time() - overall_start)
+            time_per_attempt = (timeout - (time.time() - overall_start)) / (max_attempts - attempt)
+            remaining_time = min(timeout - (time.time() - overall_start), time_per_attempt * 1.5)
+            
             result = self._solve_once(remaining_time)
             
-            if result is True:  # Solved!
+            if result is True:
                 return True
-            # If False (failed) or None (timeout), try again with different seed
         
-        return None  # All attempts failed or timed out
+        return None
     
     def _solve_once(self, timeout):
-        """Single solve attempt with given timeout."""
+        """Single solve attempt with given timeout using advanced constraint propagation."""
         num_tiles = len(self.nodes)
         if num_tiles % 2 != 0:
             return None
@@ -154,6 +228,9 @@ class Graph:
         # Track start time for timeout
         start_time = time.time()
         timed_out = [False]  # Use list to allow modification in nested functions
+        
+        # Pre-compute node degrees (number of neighbors) for MRV heuristic
+        node_degrees = {tuple(node.p): len(node.neighbors) for node in self.nodes}
         
         def find_region(node):
             """Find all nodes in the same region as the given node (using precomputed cache)."""
@@ -213,16 +290,46 @@ class Graph:
             return True
         
         def find_next_empty():
-            """Find the next node without a value assigned."""
-            # Simple, fast approach - just return first empty node
+            """Find the next node using MRV heuristic (most constrained first)."""
+            best_node = None
+            min_empty_neighbors = float('inf')
+            
+            # Quick scan for nodes with no empty neighbors (immediate fail)
             for node in self.nodes:
                 if node.value is None:
-                    return node
-            return None
+                    empty_count = sum(1 for n in node.neighbors if n.value is None)
+                    
+                    # If node has no empty neighbors, it's a dead end - return immediately
+                    if empty_count == 0:
+                        return node
+                    
+                    # Choose node with fewest empty neighbors (most constrained)
+                    if empty_count < min_empty_neighbors:
+                        min_empty_neighbors = empty_count
+                        best_node = node
+            
+            return best_node
+        
+        def has_dead_end():
+            """Check if any empty node has no valid neighbors (dead end detection)."""
+            for node in self.nodes:
+                if node.value is None:
+                    empty_neighbors = sum(1 for n in node.neighbors if n.value is None)
+                    if empty_neighbors == 0:
+                        return True
+            return False
         
         def place_domino(node, remaining_dominoes):
-            """Try to place dominoes starting from the given node."""
-            # Try dominoes in random order to avoid getting stuck in unlucky search paths
+            """Try to place dominoes with constraint propagation and pruning."""
+            # Sort neighbors by degree (prefer neighbors with fewer options)
+            empty_neighbors = [n for n in node.neighbors if n.value is None]
+            if not empty_neighbors:
+                return False  # Dead end
+            
+            # Sort by number of empty neighbors (prefer more constrained)
+            empty_neighbors.sort(key=lambda n: sum(1 for x in n.neighbors if x.value is None))
+            
+            # Simple randomization - avoid expensive priority calculation
             dominoes_to_try = remaining_dominoes[:]
             random.shuffle(dominoes_to_try)
             
@@ -233,16 +340,17 @@ class Graph:
                     orientations.append(domino[::-1])
                 
                 for current_domino in orientations:
-                    # Try placing domino on each neighbor
-                    for neighbor in node.neighbors:
-                        if neighbor.value is None:  # Neighbor is empty
-                            # Check if placement is valid
-                            if check_domino_placement(node, neighbor, current_domino):
-                                # Place the domino
-                                node.value = int(current_domino[0])
-                                neighbor.value = int(current_domino[1])
-                                
-                                # Remove domino from available dominoes (from original list, not shuffled)
+                    # Try placing domino on sorted neighbors
+                    for neighbor in empty_neighbors:
+                        # Check if placement is valid
+                        if check_domino_placement(node, neighbor, current_domino):
+                            # Place the domino
+                            node.value = int(current_domino[0])
+                            neighbor.value = int(current_domino[1])
+                            
+                            # Forward checking: did we create a dead end?
+                            if not has_dead_end():
+                                # Remove domino from available dominoes
                                 new_dominoes = remaining_dominoes[:]
                                 new_dominoes.remove(domino)
                                 
@@ -250,19 +358,24 @@ class Graph:
                                 result = backtrack(new_dominoes)
                                 if result:
                                     return True
-                                
-                                # Undo placement
-                                node.value = None
-                                neighbor.value = None
+                            
+                            # Undo placement
+                            node.value = None
+                            neighbor.value = None
             
             return False
         
+        # Timeout check counter for efficiency
+        backtrack_calls = [0]
+        
         def backtrack(remaining_dominoes):
             """Backtrack to find a valid solution."""
-            # Check timeout
-            if time.time() - start_time > timeout:
-                timed_out[0] = True
-                return False
+            # Check timeout every 200 calls (more efficient)
+            backtrack_calls[0] += 1
+            if backtrack_calls[0] % 200 == 0:
+                if time.time() - start_time > timeout:
+                    timed_out[0] = True
+                    return False
             
             # Find next empty node
             node = find_next_empty()

@@ -10,7 +10,13 @@ Currently the board and dominoes can be set up and printed out. Future plans inc
     - [] From a set of dominoes
     - [] From a starting board shape (w/ or w/o contraints)
 
-- [] Potentially refining the `.pips` file format?
+- [] Potential GPU optimization? (i.e. can we get to <5 seconds/puzzle?)
+
+- [x] 100% solve rate on NYTGames puzzles, <20 seconds/puzzle.
+
+- [x] Reimplementing as a graph structure
+
+- ~~[x] Potentially refining the `.pips` file format?~~
 
 - [x] Webscrape daily NYT pips puzzles for daily testing
 
@@ -24,15 +30,26 @@ Currently the board and dominoes can be set up and printed out. Future plans inc
 
 ## Code Files
 
-- `pips.py`: handles all logic for solution solving. The high-level method is a standard backtracking problem, where domino orientations and placements are backtracked to determine a solution that uses every domino. The low-level method uses Breadth-First Search (BFS) to find all neighboring tiles whose constraint affects the domino currently being placed. This file can be called with `python pips.py boards/board#.pips` to return the solution of a given board.
+- `pips.py`: (9/18/2025) handles all logic for solution solving. The high-level method is a standard backtracking problem, where domino orientations and placements are backtracked to determine a solution that uses every domino. The low-level method uses Breadth-First Search (BFS) to find all neighboring tiles whose constraint affects the domino currently being placed. This file can be called with `python pips.py boards/board#.pips` to return the solution of a given board.
 
-- `all.py`: Solves all boards in the `boards` directory and returns each solution.
+- `pips2.py`: (10/18/2025) a new graph-based implementation for solving Pips puzzles. This code converts JSON files directly into graphs with nodes and edges, which saves on memory.
+For reference, `pips.py` relies on puzzles being left-aligned in order to reduce the number of additional tiles needed to represent certain tiles being positioned farther to the right.
+
+- `pips3.py`: (10/18/2025) almost identical to `pips2.py` in functionality, but uses the `multiprocessing` package to run multiple randomly-seeded search attempts on a puzzle. 
+This addition is overkill on easy and medium puzzles, but due to hard puzzles being significantly larger and more complex, running multiple attempts in parallel speeds up the overall solve time.
+This change is what allows for hard puzzles to maintain a <15 second/puzzle solve time.
+
+- `all.py`: Solves all boards in the `boards_json` directory and returns each solution.
 
 - `nytgames.py`: imports the easy, medium, and hard boards from NYTGames as a specified date. The farthest date to check is 2025-07-05 according to comments online.
 
 - `fetch_games.sh`: performs the import script for all dates in a specified range.
 
-## Puzzle File Format (.pips)
+
+## ~~Puzzle File Format (.pips)~~
+
+> the .pips puzzle format is now OUTDATED since I now convert the puzzles directly to graph representation from JSON.
+
 Boards and dominoes are stored under `boards/board#.pips`, where the first row of the .pips file contains the list of dominoes, and remaining rows describe the board. Every two elements of the header represent a single domino, despite not being grouped that way.
 
 For the boards, there is some vocab to describe the state of each tile:
