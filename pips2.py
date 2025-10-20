@@ -94,7 +94,7 @@ class Graph:
             row_str = ""
             for cell in row:
                 if cell is None:
-                    row_str += " .   "
+                    row_str += "     "
                 else:
                     # If the cell has a value (solved), show it instead
                     if cell.value is not None:

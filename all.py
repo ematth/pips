@@ -1,4 +1,4 @@
-from pips3 import Graph
+from pips3 import GraphMultiProcess
 import time
 import os, json, sys
 from tqdm import tqdm
@@ -16,7 +16,7 @@ if __name__ == '__main__':
             if file.endswith('.json'):
                 total_boards += 1
                 data = json.load(open(f'boards_json/{file}'))
-                game = Graph(data, difficulty)
+                game = GraphMultiProcess(data, difficulty)
                 isSolved = game.solve(timeout=timeout_limit)
                 if isSolved is True:
                     matching_solutions += 1

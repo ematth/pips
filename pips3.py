@@ -7,7 +7,7 @@ Compared to pips2.py, this version uses multiprocessing to attempt multiple deep
 This SIGNIFICANTLY improves the solve rate for hard puzzles, and what allows it to use as much time as needed for medium puzzles.
 """
 
-class Graph:
+class GraphMultiProcess:
 
     class Node:
         def __init__(self, point, _type = None, target = None):
@@ -96,7 +96,7 @@ class Graph:
             row_str = ""
             for cell in row:
                 if cell is None:
-                    row_str += " .   "
+                    row_str += "     "
                 else:
                     # If the cell has a value (solved), show it instead
                     if cell.value is not None:
@@ -129,6 +129,13 @@ class Graph:
         else:
             return self._solve_sequential(timeout, max_attempts)
     
+    def _apply_solution(self, solution):
+        """Apply a solution dictionary to the graph nodes."""
+        for node in self.nodes:
+            key = tuple(node.p)
+            if key in solution:
+                node.value = solution[key]
+    
     def _solve_parallel(self, timeout, max_attempts):
         """Solve using parallel processes for multiple attempts."""
         overall_start = time.time()
@@ -148,13 +155,13 @@ class Graph:
             processes.append(p)
         
         # Wait for first success or all to finish
-        solution_found = None
+        solution_data = None
         while time.time() - overall_start < timeout:
             # Check if any process has found a solution
             if not result_queue.empty():
-                result = result_queue.get()
+                result, solution = result_queue.get()
                 if result is True:
-                    solution_found = True
+                    solution_data = solution
                     break
             
             # Check if all processes are done
@@ -169,14 +176,16 @@ class Graph:
                 p.terminate()
                 p.join(timeout=0.1)
         
-        # If we found a solution in the queue, return it
-        if solution_found:
+        # If we found a solution in the queue, apply it and return
+        if solution_data:
+            self._apply_solution(solution_data)
             return True
         
         # Check queue one more time for any late results
         while not result_queue.empty():
-            result = result_queue.get()
+            result, solution = result_queue.get()
             if result is True:
+                self._apply_solution(solution)
                 return True
         
         return None  # Timeout or all failed
@@ -190,10 +199,14 @@ class Graph:
             # Try solving
             result = self._solve_once(timeout)
             
-            # Put result in queue
-            result_queue.put(result if result is not None else False)
+            # If solved, serialize and return the solution
+            if result is True:
+                solution = {tuple(node.p): node.value for node in self.nodes}
+                result_queue.put((True, solution))
+            else:
+                result_queue.put((result if result is not None else False, None))
         except Exception:
-            result_queue.put(False)
+            result_queue.put((False, None))
     
     def _solve_sequential(self, timeout, max_attempts):
         """Original sequential solving (fallback)."""
@@ -410,7 +423,7 @@ if __name__ == '__main__':
     with open(f'boards_json/{date}.json', 'r') as f:
         data = json.load(f)
 
-    G = Graph(data, difficulty)
+    G = GraphMultiProcess(data, difficulty)
     print("Initial board:")
     G.visualize()
     print(f"Dominoes to place: {G.dominoes}\n")
