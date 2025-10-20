@@ -4,7 +4,7 @@
 # Set the start and end dates for the range you want to fetch.
 # Format: YYYY-MM-DD
 start_date="2025-08-18"
-end_date="2025-10-19"
+end_date=$(date +%Y-%m-%d)
 # ---------------------
 
 echo "Starting to fetch Pips games from $start_date to $end_date..."

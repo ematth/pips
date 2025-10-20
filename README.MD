@@ -10,7 +10,7 @@ Currently the board and dominoes can be set up and printed out. Future plans inc
     - [] From a set of dominoes
     - [] From a starting board shape (w/ or w/o contraints)
 
-- [] Potential GPU optimization? (i.e. can we get to <5 seconds/puzzle?)
+- [] Optimize on GPU? (i.e. can we get to <5 seconds/puzzle?)
 
 - [x] 100% solve rate on NYTGames puzzles, <20 seconds/puzzle.
 
